@@ -1,0 +1,8 @@
+train: data/coco128/images/train2017/  # 128 images
+val: data/coco128/images/train2017/  # 128 images
+
+# number of classes
+nc: 2
+
+# class names
+names: [ 'car','plane' ]
