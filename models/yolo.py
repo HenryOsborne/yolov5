@@ -6,8 +6,7 @@ import sys
 from copy import deepcopy
 from pathlib import Path
 
-sys.path.append(Path(__file__).parent.parent.absolute().__str__())  # to run '$ python *.py' files in subdirectories
-logger = logging.getLogger(__name__)
+import torch
 
 from models.common import *
 from models.experimental import *
@@ -23,6 +22,9 @@ try:
 except ImportError:
     thop = None
 
+sys.path.append(Path(__file__).parent.parent.absolute().__str__())  # to run '$ python *.py' files in subdirectories
+logger = logging.getLogger(__name__)
+
 
 class Detect(nn.Module):
     stride = None  # strides computed during build
@@ -35,7 +37,8 @@ class Detect(nn.Module):
         self.nl = len(anchors)  # number of detection layers
         self.na = len(anchors[0]) // 2  # number of anchors
         self.grid = [torch.zeros(1)] * self.nl  # init grid
-        a = torch.tensor(anchors).float().view(self.nl, -1, 2)
+        device = torch.device(config.device)
+        a = torch.tensor(anchors).float().view(self.nl, -1, 2).to(device)
         self.register_buffer('anchors', a)  # shape(nl,na,2)
         self.register_buffer('anchor_grid', a.clone().view(self.nl, 1, -1, 1, 1, 2))  # shape(nl,1,na,1,1,2)
         self.m = nn.ModuleList(nn.Conv2d(x, self.no * self.na, 1) for x in ch)  # output conv
@@ -104,7 +107,7 @@ class Model(nn.Module):
             device = torch.device(device)
             m.inplace = self.inplace
             m.stride = torch.FloatTensor(config.strides).to(device)
-            m.anchors /= m.stride.view(-1, 1, 1)
+            m.anchors = torch.FloatTensor(config.anchors).to(device)
             check_anchor_order(m)
             self.stride = m.stride
             self._initialize_biases()  # only run once
